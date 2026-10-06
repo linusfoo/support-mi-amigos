@@ -157,6 +157,7 @@ async function checkNewAmigo(username: string, displayName: string, password: st
   if (!USERNAME.test(username)) return "Usernames are 3–20 lowercase letters, numbers or underscores.";
   if (!displayName) return "Add a display name, like Ana.";
   if (password.length < 8) return "Passwords need at least 8 characters.";
+  // Friendly pre-check only: it can race. The users_cap trigger (advisory-locked) is the real guard.
   const [{ count }] = await db()<{ count: number }[]>`select count(*) from users`;
   if (count >= MAX_AMIGOS) return `Support Mi Amigos is for ${MAX_AMIGOS} amigos max, and it's full.`;
   return null;

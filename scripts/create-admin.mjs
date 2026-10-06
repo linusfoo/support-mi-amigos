@@ -33,13 +33,25 @@ try {
     console.error(`"${other.username}" is already the superadmin. There can only be one.`);
     process.exitCode = 1;
   } else {
-    await sql`
-      insert into users (username, display_name, password_hash, is_admin, is_superadmin)
-      values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), true, true)
-      on conflict (username) do update
-        set password_hash = excluded.password_hash, is_admin = true, is_superadmin = true,
-            display_name = excluded.display_name`;
-    console.log(`Superadmin "${username}" is ready.`);
+    // Update first, insert only if nobody has that username. An
+    // "insert ... on conflict do update" fires the BEFORE INSERT cap trigger
+    // even for an existing account, so resetting the admin's password would
+    // fail once the group is full.
+    const updated = await sql`
+      update users
+         set password_hash = extensions.crypt(${password}, extensions.gen_salt('bf')),
+             is_admin = true,
+             is_superadmin = true,
+             display_name = ${displayName}
+       where username = ${username}`;
+    if (updated.count === 0) {
+      await sql`
+        insert into users (username, display_name, password_hash, is_admin, is_superadmin)
+        values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), true, true)`;
+      console.log(`Superadmin "${username}" created.`);
+    } else {
+      console.log(`Superadmin "${username}" reset.`);
+    }
   }
 } finally {
   await sql.end();
