@@ -1,17 +1,28 @@
 import "server-only";
 import { cache } from "react";
 import postgres from "postgres";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const onWorkers = typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 
 function connect(max: number) {
+  // On Workers, go through Hyperdrive: it holds the TLS connection to Supabase, which a
+  // Worker socket can't verify itself. The Worker-to-Hyperdrive hop needs no TLS.
+  const hyperdrive = onWorkers
+    ? (getCloudflareContext().env as { HYPERDRIVE?: { connectionString: string } }).HYPERDRIVE
+    : undefined;
   // postgres.js connects lazily, so a missing URL only fails on the first query
   // (keeps `next build` working without a database).
-  const url = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+  const url =
+    hyperdrive?.connectionString ??
+    process.env.DATABASE_URL ??
+    "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
   const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
   return postgres(url, {
     max,
-    ssl: isLocal ? false : "require",
+    ssl: hyperdrive || isLocal ? false : "require",
+    // Hyperdrive serves type info itself; skipping the lookup saves a round trip.
+    fetch_types: !hyperdrive,
     // Supabase's pooler (port 6543, transaction mode) doesn't support prepared statements.
     prepare: false,
     // ids, counts and sums are bigint; at ten-friend scale a JS number is plenty.

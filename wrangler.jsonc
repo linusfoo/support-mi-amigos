@@ -14,6 +14,16 @@
 			"binding": "WORKER_SELF_REFERENCE",
 			"service": "support-mi-amigos"
 		}
+	],
+	// Workers can't verify Supabase's TLS certificate on a raw socket, so on Cloudflare
+	// the app reaches Postgres through Hyperdrive (pointed at the Supabase session pooler).
+	// Recreate with: npx wrangler hyperdrive create <name> --connection-string="<pooler url, port 5432>"
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "b21343c5984c4d5abce9cb9b31c6ccb5",
+			// Used by `next build` / `npm run preview`; local Supabase CLI defaults, no real secret.
+			"localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+		}
 	]
-	// DATABASE_URL is a secret: `npx wrangler secret put DATABASE_URL`
 }
