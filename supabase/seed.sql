@@ -1,8 +1,8 @@
 -- Demo data for local development only. Passwords are local test values:
 --   admin / admin-amigos      (superadmin)
 --   ana, mei, raj, sam, jo / amigos123
--- Triggers are paused so we can seed pledges on projects that already closed.
-set session_replication_role = replica;
+-- Closed projects are created open, pledged to, then backdated, so the
+-- pledge rules trigger stays on (works without superuser, e.g. Supabase cloud).
 
 insert into public.users (username, display_name, password_hash, is_admin) values
   ('admin', 'Admin',  extensions.crypt('admin-amigos', extensions.gen_salt('bf')), true),
@@ -24,10 +24,10 @@ insert into public.projects (creator_id, title, description, goal_cents, deadlin
    60000, now() + interval '20 days'),
   ((select id from users where username = 'jo'), 'Shared streaming plan for the year',
    'One family plan, six profiles, no more password begging.',
-   6000, now() - interval '2 days'),
+   6000, now() + interval '1 day'),
   ((select id from users where username = 'mei'), 'Board-game shelf for the clubhouse',
    'A proper shelf so the games stop living in a laundry basket.',
-   15000, now() - interval '5 days');
+   15000, now() + interval '1 day');
 
 insert into public.pledges (project_id, backer_id, amount_cents)
 select p.id, u.id, v.amount
@@ -49,4 +49,5 @@ from (values
 join public.projects p on p.title = v.title
 join public.users u on u.username = v.username;
 
-set session_replication_role = origin;
+update public.projects set deadline = now() - interval '2 days' where title = 'Shared streaming plan for the year';
+update public.projects set deadline = now() - interval '5 days' where title = 'Board-game shelf for the clubhouse';
