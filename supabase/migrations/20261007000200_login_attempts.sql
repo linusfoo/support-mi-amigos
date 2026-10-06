@@ -1,5 +1,5 @@
 -- Throttling for log-in and sign-up (see lib/rate-limit.ts).
--- One row per failed log-in (kind = 'login') or per sign-up attempt (kind = 'signup').
+-- One row per log-in attempt (kind = 'login'; a successful log-in deletes its username's rows) or per sign-up attempt (kind = 'signup').
 -- Rows are counted inside a short window and pruned by the app once they're old.
 
 create table public.login_attempts (

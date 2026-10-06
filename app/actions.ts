@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { endSession, requireAdmin, requireUser, startSession, verifyPassword } from "@/lib/auth";
 import { canEditProject, canPledge, MAX_AMIGOS, type ProjectCore } from "@/lib/rules";
 import { fromDateInput } from "@/lib/format";
-import { clearFailedLogins, clientIp, loginBlocked, recordFailedLogin, throttleSignUp } from "@/lib/rate-limit";
+import { clearFailedLogins, clientIp, startLogin, throttleSignUp } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -41,12 +41,12 @@ async function loadProject(id: number) {
 export async function logIn(_: FormState, fd: FormData): Promise<FormState> {
   const username = text(fd, "username");
   const ip = await clientIp();
-  // Checked before verifyPassword so a locked-out caller never costs a bcrypt run.
-  const blocked = await loginBlocked(username, ip);
+  // Records this attempt as a failure up front, then checks the limits, so parallel guesses
+  // count against each other and a locked-out caller never costs a bcrypt run.
+  const blocked = await startLogin(username, ip);
   if (blocked) return { error: blocked };
   const user = await verifyPassword(username, String(fd.get("password") ?? ""));
   if (!user) {
-    await recordFailedLogin(username, ip);
     return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
   }
   await clearFailedLogins(username);
