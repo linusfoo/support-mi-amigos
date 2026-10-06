@@ -1,11 +1,12 @@
 -- Demo data for local development only. Passwords are local test values:
---   admin / admin-amigos      (superadmin)
+--   admin / admin-amigos      (superadmin, unless create-admin already made one)
 --   ana, mei, raj, sam, jo / amigos123
 -- Closed projects are created open, pledged to, then backdated, so the
 -- pledge rules trigger stays on (works without superuser, e.g. Supabase cloud).
 
 insert into public.users (username, display_name, password_hash, is_admin, is_superadmin) values
-  ('admin', 'Admin',  extensions.crypt('admin-amigos', extensions.gen_salt('bf')), true,  true),
+  ('admin', 'Admin',  extensions.crypt('admin-amigos', extensions.gen_salt('bf')), true,
+   not exists (select 1 from public.users where is_superadmin)),
   ('ana',   'Ana',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
   ('mei',   'Mei',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
   ('raj',   'Raj',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),

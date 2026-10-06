@@ -231,11 +231,12 @@ export async function updateAmigo(_: FormState, fd: FormData): Promise<FormState
 
   try {
     // The role check in the where clause stops a race with a concurrent promotion.
-    await db()`
+    const { count } = await db()`
       update users set display_name = ${displayName}, is_admin = ${isAdmin},
         password_hash = case when ${password} = '' then password_hash
                              else extensions.crypt(${password}, extensions.gen_salt('bf')) end
       where id = ${target.id} and is_admin = ${target.is_admin} and is_superadmin = ${target.is_superadmin}`;
+    if (count === 0) return { error: "Their account just changed. Reload and try again." };
     // A password reset signs that person out everywhere.
     if (password) await db()`delete from sessions where user_id = ${target.id}`;
   } catch (e) {

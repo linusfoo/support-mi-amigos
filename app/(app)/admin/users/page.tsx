@@ -76,7 +76,7 @@ export default async function AmigosPage() {
                     {canSetAdmin(viewer, a) && (
                       <label className="flex items-center gap-2">
                         <input type="checkbox" name="isAdmin" defaultChecked={a.is_admin} />
-                        Admin (can manage regular amigos and every project)
+                        Admin (can manage regular amigos)
                       </label>
                     )}
                   </ActionForm>
