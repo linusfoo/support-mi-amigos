@@ -8,8 +8,12 @@ const onWorkers = typeof navigator !== "undefined" && navigator.userAgent === "C
  * (`wrangler secret put` on Workers, .env.local in `next dev`). Empty means sign-up is closed.
  */
 export function inviteCode(): string {
-  const env = onWorkers ? (getCloudflareContext().env as { INVITE_CODE?: string }) : undefined;
-  return (env?.INVITE_CODE ?? process.env.INVITE_CODE ?? "").trim();
+  // On Workers, read only the secret binding: OpenNext bundles .env* files into process.env,
+  // so falling back to it could ship a dev code and keep sign-up open after the secret is deleted.
+  const raw = onWorkers
+    ? (getCloudflareContext().env as { INVITE_CODE?: string }).INVITE_CODE
+    : process.env.INVITE_CODE;
+  return (raw ?? "").trim();
 }
 
 export function signupOpen(): boolean {

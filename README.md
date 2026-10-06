@@ -45,7 +45,7 @@ npm run deploy
 
 `npm run preview` runs the Workers build locally first. It reads `DATABASE_URL` and `INVITE_CODE` from `.dev.vars` (see `.dev.vars.example`).
 
-`INVITE_CODE` gates `/signup`: friends must type it to create an account. If it is unset or empty, sign-up is closed and only the superadmin can add amigos. To change it, run `npx wrangler secret put INVITE_CODE` again; existing accounts are unaffected.
+`INVITE_CODE` gates `/signup`: friends must type it to create an account. If it is unset or empty, sign-up is closed and only the superadmin can add amigos. To change it, run `npx wrangler secret put INVITE_CODE` again; existing accounts are unaffected. Use a long random value (e.g. `openssl rand -base64 18`), since anyone who guesses it can join. In production only the Wrangler secret counts; `INVITE_CODE` in `.env.local` is ignored there.
 
 ## Planning
 
