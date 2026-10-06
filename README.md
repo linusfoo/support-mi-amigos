@@ -44,6 +44,15 @@ npm run deploy
 
 `npm run preview` runs the Workers build locally first. It reads `DATABASE_URL` from `.dev.vars` (see `.dev.vars.example`).
 
+### Login throttling
+
+Log-in and sign-up are throttled in the app itself, using the `login_attempts` table (see [`lib/rate-limit.ts`](lib/rate-limit.ts)), so it works with no Cloudflare dashboard setup:
+
+- 5 failed log-ins per username, or 20 per IP address, within 15 minutes locks that username or IP out until the oldest of those failures is 15 minutes old. A successful log-in clears the username's count.
+- 5 sign-up attempts per IP address per hour.
+
+Optional extra layer: add a Cloudflare WAF **rate limiting rule** (Security → WAF → Rate limiting rules) on `POST` requests to `/login` and `/signup`, for example 10 requests per minute per IP. That stops floods at the edge before they reach the Worker or the database. The app doesn't depend on it.
+
 ## Planning
 
 All the planning questions and answers are in [Q.md](Q.md). The build plan is in [docs/PLAN.md](docs/PLAN.md).
