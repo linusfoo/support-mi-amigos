@@ -6,12 +6,14 @@ Built for a class exercise: take a familiar app and shrink it for a group of at 
 
 | | |
 |---|---|
-| **The ten** | A friend group. Friends sign up themselves at `/signup`, or the superadmin adds them; either way, max 10 accounts. |
+| **The ten** | A friend group. Friends sign up themselves at `/signup`, or an admin adds them; either way, max 10 accounts. |
 | **One record** | A **project**: title, story, $ goal, deadline. |
 | **One shared action** | **Pledge** dollars toward a project. All-or-nothing: *Funded!* if the goal is reached by the deadline, *Missed it* if not. No real money moves. |
 | **One rule** | **Only the project's creator (and the superadmin) can see who pledged and how much.** Everyone else sees the total, the backer count, and their own pledge. You can't back your own project, and pledges lock at the deadline. |
 
 The rule lives in [`lib/rules.ts`](lib/rules.ts) and is applied in the query in [`lib/projects.ts`](lib/projects.ts): backer names never leave the database for anyone else. The database enforces the pledge rules and the 10-account cap again with triggers ([migration](supabase/migrations/20261006000000_init.sql)).
+
+**Roles.** There is exactly one **superadmin** (made with `npm run create-admin`). Only the superadmin can make or unmake admins, and change or remove an admin's account. **Admins** can add, edit, reset passwords for, and remove regular amigos, but not other admins. Admins don't see backer lists or edit other people's projects; only the superadmin does. Nobody can change or remove the superadmin except the superadmin, who can't remove or demote themselves. These account rules are in [`lib/rules.ts`](lib/rules.ts) too.
 
 ## Stack
 
