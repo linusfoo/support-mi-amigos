@@ -4,13 +4,13 @@
 -- Closed projects are created open, pledged to, then backdated, so the
 -- pledge rules trigger stays on (works without superuser, e.g. Supabase cloud).
 
-insert into public.users (username, display_name, password_hash, is_admin) values
-  ('admin', 'Admin',  extensions.crypt('admin-amigos', extensions.gen_salt('bf')), true),
-  ('ana',   'Ana',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false),
-  ('mei',   'Mei',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false),
-  ('raj',   'Raj',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false),
-  ('sam',   'Sam',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false),
-  ('jo',    'Jo',     extensions.crypt('amigos123',    extensions.gen_salt('bf')), false);
+insert into public.users (username, display_name, password_hash, is_admin, is_superadmin) values
+  ('admin', 'Admin',  extensions.crypt('admin-amigos', extensions.gen_salt('bf')), true,  true),
+  ('ana',   'Ana',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
+  ('mei',   'Mei',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
+  ('raj',   'Raj',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
+  ('sam',   'Sam',    extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false),
+  ('jo',    'Jo',     extensions.crypt('amigos123',    extensions.gen_salt('bf')), false, false);
 
 insert into public.projects (creator_id, title, description, goal_cents, deadline) values
   ((select id from users where username = 'ana'), 'Karaoke machine for Friday nights',

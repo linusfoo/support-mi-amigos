@@ -1,4 +1,4 @@
-// Creates (or resets) a superadmin account.
+// Creates (or resets) the superadmin account. There can only be one superadmin.
 // Usage: node --env-file=.env.local scripts/create-admin.mjs <username> "<Display Name>"
 // The password is read from the ADMIN_PASSWORD env var or prompted, so it never lands in shell history.
 import postgres from "postgres";
@@ -28,12 +28,19 @@ if (!password || password.length < 8) {
 const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(process.env.DATABASE_URL);
 const sql = postgres(process.env.DATABASE_URL, { ssl: isLocal ? false : "require", prepare: false, max: 1 });
 try {
-  await sql`
-    insert into users (username, display_name, password_hash, is_admin)
-    values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), true)
-    on conflict (username) do update
-      set password_hash = excluded.password_hash, is_admin = true, display_name = excluded.display_name`;
-  console.log(`Superadmin "${username}" is ready.`);
+  const [other] = await sql`select username from users where is_superadmin and username <> ${username}`;
+  if (other) {
+    console.error(`"${other.username}" is already the superadmin. There can only be one.`);
+    process.exitCode = 1;
+  } else {
+    await sql`
+      insert into users (username, display_name, password_hash, is_admin, is_superadmin)
+      values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), true, true)
+      on conflict (username) do update
+        set password_hash = excluded.password_hash, is_admin = true, is_superadmin = true,
+            display_name = excluded.display_name`;
+    console.log(`Superadmin "${username}" is ready.`);
+  }
 } finally {
   await sql.end();
 }

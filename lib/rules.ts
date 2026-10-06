@@ -35,3 +35,26 @@ export function canEditProject(viewer: User, project: ProjectCore) {
 }
 
 export const MAX_AMIGOS = 10;
+
+// ---------- Accounts ----------
+// The one superadmin manages admins; admins manage regular members only.
+// Nobody but the superadmin can change the superadmin's account.
+
+export type AmigoCore = { id: number; is_admin: boolean; is_superadmin: boolean };
+
+/** Change someone's display name or reset their password. Anyone may edit themselves. */
+export function canEditAmigo(viewer: User, target: AmigoCore) {
+  if (viewer.id === target.id) return true;
+  if (!viewer.is_admin || target.is_superadmin) return false;
+  return viewer.is_superadmin || !target.is_admin;
+}
+
+/** Grant or revoke admin: superadmin only, and never on the superadmin (so they can't demote themselves). */
+export function canSetAdmin(viewer: User, target?: AmigoCore) {
+  return viewer.is_superadmin && !target?.is_superadmin;
+}
+
+/** Remove an account: like editing, but never yourself and never the superadmin. */
+export function canDeleteAmigo(viewer: User, target: AmigoCore) {
+  return viewer.id !== target.id && !target.is_superadmin && canEditAmigo(viewer, target);
+}
