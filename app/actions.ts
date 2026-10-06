@@ -15,6 +15,7 @@ import {
   type ProjectCore,
 } from "@/lib/rules";
 import { fromDateInput } from "@/lib/format";
+import { clearFailedLogins, clientIp, startLogin, throttleSignUp } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -47,8 +48,17 @@ async function loadProject(id: number) {
 // ---------- Session ----------
 
 export async function logIn(_: FormState, fd: FormData): Promise<FormState> {
-  const user = await verifyPassword(text(fd, "username"), String(fd.get("password") ?? ""));
-  if (!user) return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
+  const username = text(fd, "username");
+  const ip = await clientIp();
+  // Records this attempt as a failure up front, then checks the limits, so parallel guesses
+  // count against each other and a locked-out caller never costs a bcrypt run.
+  const blocked = await startLogin(username, ip);
+  if (blocked) return { error: blocked };
+  const user = await verifyPassword(username, String(fd.get("password") ?? ""));
+  if (!user) {
+    return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
+  }
+  await clearFailedLogins(username);
   await startSession(user.id);
   redirect("/");
 }
@@ -173,6 +183,8 @@ async function insertAmigo(username: string, displayName: string, password: stri
 
 /** Anyone with the link can join until the group hits MAX_AMIGOS. Never creates an admin. */
 export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
+  const throttled = await throttleSignUp();
+  if (throttled) return { error: throttled };
   const username = text(fd, "username").toLowerCase();
   const displayName = text(fd, "displayName");
   const password = String(fd.get("password") ?? "");
