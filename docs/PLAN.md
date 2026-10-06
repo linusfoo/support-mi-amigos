@@ -6,7 +6,7 @@ Class project 3: shrink a familiar app down for a group of up to ten people, wit
 - **Record:** a *project*, i.e. something the friends want to fund (karaoke machine, birthday gift, trip deposit). It has a title, description, $ goal, and deadline.
 - **Shared action:** *pledge* dollars toward a project. It's all-or-nothing: the project is funded if the goal is reached by the deadline. No real payments are involved.
 - **Rule:** only the project's creator (and the superadmin) can see **who** pledged and how much. Everyone else sees only the total raised and the number of backers, plus their own pledge.
-- **Who:** a friend group of up to 10 accounts. The **superadmin** creates every account (there is no self sign-up) and has CRUD over users and all projects.
+- **Who:** a friend group of up to 10 accounts. The **superadmin** creates every account (there is no self sign-up; *update: friends can now self sign-up at `/signup`, gated by a shared `INVITE_CODE` secret*) and has CRUD over users and all projects.
 
 ## Step 0: Write Q.md (first action after approval)
 Create `project3/Q.md` with all 5 rounds / 15 questions and answers, word for word:

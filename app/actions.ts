@@ -15,6 +15,7 @@ import {
   type ProjectCore,
 } from "@/lib/rules";
 import { fromDateInput } from "@/lib/format";
+import { checkInviteCode, signupOpen } from "@/lib/invite";
 import { clearFailedLogins, clientIp, startLogin, throttleSignUp } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
@@ -181,10 +182,15 @@ async function insertAmigo(username: string, displayName: string, password: stri
   return row.id;
 }
 
-/** Anyone with the link can join until the group hits MAX_AMIGOS. Never creates an admin. */
+/** Friends with the shared invite code can join until the group hits MAX_AMIGOS. Never creates an admin. */
 export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
+  // Throttle first, so wrong invite-code guesses count against the sign-up limit too.
   const throttled = await throttleSignUp();
   if (throttled) return { error: throttled };
+  if (!signupOpen()) return { error: "Sign-up is closed. Ask the admin for an invite." };
+  if (!(await checkInviteCode(String(fd.get("inviteCode") ?? "")))) {
+    return { error: "That invite code isn't right. Ask the admin for the current one." };
+  }
   const username = text(fd, "username").toLowerCase();
   const displayName = text(fd, "displayName");
   const password = String(fd.get("password") ?? "");

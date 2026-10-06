@@ -91,5 +91,5 @@ Options: I'll fix Docker, then retry · Switch to Supabase cloud · Embedded Pos
 - **Record:** a project (title, story, $ goal, deadline).
 - **Shared action:** pledge $ toward a project.
 - **Rule:** only the project's creator (and the superadmin) can see who pledged and how much; everyone else sees totals only plus their own pledge. You can't back your own project.
-- **Login:** username + password in the database; only the superadmin creates accounts (max 10).
+- **Login:** username + password in the database; only the superadmin creates accounts (max 10). *Update: friends can also sign up at `/signup` with a shared invite code (`INVITE_CODE`).*
 - **Design:** riso-print fundraiser-flyer look (pink + blue overprint, navy ink, Bricolage Grotesque + Atkinson Hyperlegible).
