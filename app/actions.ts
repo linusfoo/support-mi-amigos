@@ -4,9 +4,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { endSession, requireAdmin, requireUser, startSession, verifyPassword } from "@/lib/auth";
-import { canEditProject, canPledge, MAX_AMIGOS, type ProjectCore } from "@/lib/rules";
+import {
+  canDeleteAmigo,
+  canEditAmigo,
+  canEditProject,
+  canPledge,
+  canSetAdmin,
+  MAX_AMIGOS,
+  type AmigoCore,
+  type ProjectCore,
+} from "@/lib/rules";
 import { fromDateInput } from "@/lib/format";
 import { checkInviteCode, signupOpen } from "@/lib/invite";
+import { clearFailedLogins, clientIp, startLogin, throttleSignUp } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -39,8 +49,17 @@ async function loadProject(id: number) {
 // ---------- Session ----------
 
 export async function logIn(_: FormState, fd: FormData): Promise<FormState> {
-  const user = await verifyPassword(text(fd, "username"), String(fd.get("password") ?? ""));
-  if (!user) return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
+  const username = text(fd, "username");
+  const ip = await clientIp();
+  // Records this attempt as a failure up front, then checks the limits, so parallel guesses
+  // count against each other and a locked-out caller never costs a bcrypt run.
+  const blocked = await startLogin(username, ip);
+  if (blocked) return { error: blocked };
+  const user = await verifyPassword(username, String(fd.get("password") ?? ""));
+  if (!user) {
+    return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
+  }
+  await clearFailedLogins(username);
   await startSession(user.id);
   redirect("/");
 }
@@ -140,7 +159,7 @@ export async function withdrawPledge(_: FormState, fd: FormData): Promise<FormSt
   return { ok: "Pledge taken back." };
 }
 
-// ---------- Amigos (superadmin only) ----------
+// ---------- Amigos (admins; who may change whom is in lib/rules.ts) ----------
 
 const USERNAME = /^[a-z0-9_]{3,20}$/;
 
@@ -149,6 +168,7 @@ async function checkNewAmigo(username: string, displayName: string, password: st
   if (!USERNAME.test(username)) return "Usernames are 3–20 lowercase letters, numbers or underscores.";
   if (!displayName) return "Add a display name, like Ana.";
   if (password.length < 8) return "Passwords need at least 8 characters.";
+  // Friendly pre-check only: it can race. The users_cap trigger (advisory-locked) is the real guard.
   const [{ count }] = await db()<{ count: number }[]>`select count(*) from users`;
   if (count >= MAX_AMIGOS) return `Support Mi Amigos is for ${MAX_AMIGOS} amigos max, and it's full.`;
   return null;
@@ -164,6 +184,9 @@ async function insertAmigo(username: string, displayName: string, password: stri
 
 /** Friends with the shared invite code can join until the group hits MAX_AMIGOS. Never creates an admin. */
 export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
+  // Throttle first, so wrong invite-code guesses count against the sign-up limit too.
+  const throttled = await throttleSignUp();
+  if (throttled) return { error: throttled };
   if (!signupOpen()) return { error: "Sign-up is closed. Ask the admin for an invite." };
   if (!(await checkInviteCode(String(fd.get("inviteCode") ?? "")))) {
     return { error: "That invite code isn't right. Ask the admin for the current one." };
@@ -187,12 +210,13 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
 }
 
 export async function createAmigo(_: FormState, fd: FormData): Promise<FormState> {
-  await requireAdmin();
+  const viewer = await requireAdmin();
   const username = text(fd, "username").toLowerCase();
   const displayName = text(fd, "displayName");
   const password = String(fd.get("password") ?? "");
   const isAdmin = fd.get("isAdmin") === "on";
 
+  if (isAdmin && !canSetAdmin(viewer)) return { error: "Only the superadmin can make someone an admin." };
   const problem = await checkNewAmigo(username, displayName, password);
   if (problem) return { error: problem };
 
@@ -205,25 +229,35 @@ export async function createAmigo(_: FormState, fd: FormData): Promise<FormState
   return { ok: `Added ${displayName}. Share their username and password with them.` };
 }
 
+async function loadAmigo(id: number) {
+  if (!Number.isSafeInteger(id) || id <= 0) return null;
+  const [a] = await db()<AmigoCore[]>`select id, is_admin, is_superadmin from users where id = ${id}`;
+  return a ?? null;
+}
+
 export async function updateAmigo(_: FormState, fd: FormData): Promise<FormState> {
-  const admin = await requireAdmin();
-  const id = Number(fd.get("id"));
+  const viewer = await requireAdmin();
+  const target = await loadAmigo(Number(fd.get("id")));
   const displayName = text(fd, "displayName");
   const password = String(fd.get("password") ?? "");
-  const isAdmin = fd.get("isAdmin") === "on";
 
+  if (!target) return { error: "That amigo no longer exists." };
+  if (!canEditAmigo(viewer, target)) return { error: "Only the superadmin can change an admin's account." };
+  // The admin checkbox only counts for someone allowed to set it; otherwise the role stays as it is.
+  const isAdmin = canSetAdmin(viewer, target) ? fd.get("isAdmin") === "on" : target.is_admin;
   if (!displayName) return { error: "Display name can't be empty." };
   if (password && password.length < 8) return { error: "New passwords need at least 8 characters." };
-  if (id === admin.id && !isAdmin) return { error: "You can't remove your own admin rights." };
 
   try {
-    await db()`
+    // The role check in the where clause stops a race with a concurrent promotion.
+    const { count } = await db()`
       update users set display_name = ${displayName}, is_admin = ${isAdmin},
         password_hash = case when ${password} = '' then password_hash
                              else extensions.crypt(${password}, extensions.gen_salt('bf')) end
-      where id = ${id}`;
+      where id = ${target.id} and is_admin = ${target.is_admin} and is_superadmin = ${target.is_superadmin}`;
+    if (count === 0) return { error: "Their account just changed. Reload and try again." };
     // A password reset signs that person out everywhere.
-    if (password) await db()`delete from sessions where user_id = ${id}`;
+    if (password) await db()`delete from sessions where user_id = ${target.id}`;
   } catch (e) {
     return { error: dbMessage(e) };
   }
@@ -232,8 +266,12 @@ export async function updateAmigo(_: FormState, fd: FormData): Promise<FormState
 }
 
 export async function deleteAmigo(fd: FormData) {
-  const admin = await requireAdmin();
-  const id = Number(fd.get("id"));
-  if (id && id !== admin.id) await db()`delete from users where id = ${id}`;
+  const viewer = await requireAdmin();
+  const target = await loadAmigo(Number(fd.get("id")));
+  if (target && canDeleteAmigo(viewer, target)) {
+    await db()`
+      delete from users
+      where id = ${target.id} and is_admin = ${target.is_admin} and is_superadmin = false`;
+  }
   revalidatePath("/", "layout");
 }
