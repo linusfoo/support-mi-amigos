@@ -80,6 +80,11 @@ Options: Users + all projects · Users only
 Options: New public repo via gh · New private repo · I'll create it myself
 **A:** New public repo via gh (`support-mi-amigos`).
 
+## Round 7 (during the build)
+**Q19. Docker Desktop's engine won't start, so local Supabase can't run. How should we proceed?**
+Options: I'll fix Docker, then retry · Switch to Supabase cloud · Embedded Postgres (PGlite)
+**A:** "End goal is to deploy it online, so whichever is easier." → Supabase cloud (free tier) for the database and Vercel for hosting.
+
 ## Final scope
 - **Record:** a project (title, story, $ goal, deadline).
 - **Shared action:** pledge $ toward a project.
