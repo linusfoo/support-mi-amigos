@@ -1,0 +1,2 @@
+# Used by `npm run preview` (wrangler). Same value as DATABASE_URL in .env.local.
+DATABASE_URL=

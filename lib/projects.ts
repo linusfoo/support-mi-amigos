@@ -1,5 +1,5 @@
 import "server-only";
-import { sql } from "./db";
+import { db } from "./db";
 import type { User } from "./auth";
 import { canSeeBackers, statusOf, type Status } from "./rules";
 
@@ -32,7 +32,7 @@ function withStatus(row: Row): ProjectSummary {
 
 /** Totals are public; only the viewer's own pledge amount is attached. */
 export async function listProjects(viewer: User): Promise<ProjectSummary[]> {
-  const rows = await sql<Row[]>`
+  const rows = await db()<Row[]>`
     select p.id, p.title, p.description, p.goal_cents, p.deadline, p.creator_id,
            u.display_name as creator_name,
            coalesce(sum(pl.amount_cents), 0) as total_cents,
@@ -49,7 +49,7 @@ export async function listProjects(viewer: User): Promise<ProjectSummary[]> {
 }
 
 export async function getProject(id: number, viewer: User): Promise<ProjectDetail | null> {
-  const [row] = await sql<Row[]>`
+  const [row] = await db()<Row[]>`
     select p.id, p.title, p.description, p.goal_cents, p.deadline, p.creator_id,
            u.display_name as creator_name,
            coalesce(sum(pl.amount_cents), 0) as total_cents,
@@ -66,7 +66,7 @@ export async function getProject(id: number, viewer: User): Promise<ProjectDetai
   // The privacy rule is applied at the query: names never leave the database
   // for anyone who isn't the creator or the superadmin.
   const backers = canSeeBackers(viewer, project)
-    ? await sql<Backer[]>`
+    ? await db()<Backer[]>`
         select u.display_name as name, pl.amount_cents, pl.updated_at
         from pledges pl join users u on u.id = pl.backer_id
         where pl.project_id = ${id}

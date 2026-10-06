@@ -83,7 +83,9 @@ Options: New public repo via gh · New private repo · I'll create it myself
 ## Round 7 (during the build)
 **Q19. Docker Desktop's engine won't start, so local Supabase can't run. How should we proceed?**
 Options: I'll fix Docker, then retry · Switch to Supabase cloud · Embedded Postgres (PGlite)
-**A:** "End goal is to deploy it online, so whichever is easier." → Supabase cloud (free tier) for the database and Vercel for hosting.
+**A:** "End goal is to deploy it online, so whichever is easier." → Supabase cloud (free tier) for the database.
+
+**Follow-up (user):** "I want to deploy frontend on Cloudflare." → Next.js runs on Cloudflare Workers via the OpenNext adapter (`@opennextjs/cloudflare`); the database stays on Supabase cloud.
 
 ## Final scope
 - **Record:** a project (title, story, $ goal, deadline).
