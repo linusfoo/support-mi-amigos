@@ -13,12 +13,13 @@ export type User = {
   username: string;
   display_name: string;
   is_admin: boolean;
+  is_superadmin: boolean;
 };
 
 /** Checks a username/password against the bcrypt hash stored in Postgres. */
 export async function verifyPassword(username: string, password: string): Promise<User | null> {
   const [user] = await db()<User[]>`
-    select id, username, display_name, is_admin
+    select id, username, display_name, is_admin, is_superadmin
     from users
     where username = ${username.trim().toLowerCase()}
       and password_hash = extensions.crypt(${password}, password_hash)`;
@@ -50,7 +51,7 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const [user] = await db()<User[]>`
-    select u.id, u.username, u.display_name, u.is_admin
+    select u.id, u.username, u.display_name, u.is_admin, u.is_superadmin
     from sessions s join users u on u.id = s.user_id
     where s.token = ${token} and s.expires_at > now()`;
   return user ?? null;
