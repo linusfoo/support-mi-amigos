@@ -6,7 +6,7 @@ Built for a class exercise: take a familiar app and shrink it for a group of at 
 
 | | |
 |---|---|
-| **The ten** | A friend group. Friends sign up themselves at `/signup`, or the superadmin adds them; either way, max 10 accounts. |
+| **The ten** | A friend group. Friends sign up themselves at `/signup` with a shared invite code, or the superadmin adds them; either way, max 10 accounts. |
 | **One record** | A **project**: title, story, $ goal, deadline. |
 | **One shared action** | **Pledge** dollars toward a project. All-or-nothing: *Funded!* if the goal is reached by the deadline, *Missed it* if not. No real money moves. |
 | **One rule** | **Only the project's creator (and the superadmin) can see who pledged and how much.** Everyone else sees the total, the backer count, and their own pledge. You can't back your own project, and pledges lock at the deadline. |
@@ -24,7 +24,7 @@ The rule lives in [`lib/rules.ts`](lib/rules.ts) and is applied in the query in 
 
 ```bash
 npm install
-cp .env.example .env.local      # then paste your DATABASE_URL
+cp .env.example .env.local      # then paste your DATABASE_URL (and INVITE_CODE to open sign-up)
 npm run db:migrate              # create the tables
 npm run create-admin -- admin "Admin"   # prompts for a password
 npm run dev
@@ -39,10 +39,13 @@ For a throwaway demo database, `npm run db:seed` adds 5 friends and 5 projects. 
 ```bash
 npx wrangler login
 npx wrangler secret put DATABASE_URL    # paste the same pooler string
+npx wrangler secret put INVITE_CODE     # the code friends type at /signup
 npm run deploy
 ```
 
-`npm run preview` runs the Workers build locally first. It reads `DATABASE_URL` from `.dev.vars` (see `.dev.vars.example`).
+`npm run preview` runs the Workers build locally first. It reads `DATABASE_URL` and `INVITE_CODE` from `.dev.vars` (see `.dev.vars.example`).
+
+`INVITE_CODE` gates `/signup`: friends must type it to create an account. If it is unset or empty, sign-up is closed and only the superadmin can add amigos. To change it, run `npx wrangler secret put INVITE_CODE` again; existing accounts are unaffected.
 
 ## Planning
 

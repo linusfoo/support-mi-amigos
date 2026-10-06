@@ -1,2 +1,4 @@
 # Used by `npm run preview` (wrangler). Same value as DATABASE_URL in .env.local.
 DATABASE_URL=
+# Shared invite code friends type at /signup. Leave empty to keep sign-up closed.
+INVITE_CODE=
