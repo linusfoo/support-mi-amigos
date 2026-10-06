@@ -125,7 +125,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         ) : (
           <>
             <p className="text-[0.95rem] text-muted">
-              {mine ? "Only you" : `Only ${project.creator_name} and admins`} can see this list.
+              {mine ? "Only you" : `Only ${project.creator_name} and the superadmin`} can see this list.
             </p>
             <table className="w-full max-w-md text-left">
               <thead className="text-[0.95rem] text-muted">

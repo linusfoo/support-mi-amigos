@@ -13,7 +13,7 @@ Built for a class exercise: take a familiar app and shrink it for a group of at 
 
 The rule lives in [`lib/rules.ts`](lib/rules.ts) and is applied in the query in [`lib/projects.ts`](lib/projects.ts): backer names never leave the database for anyone else. The database enforces the pledge rules and the 10-account cap again with triggers ([migration](supabase/migrations/20261006000000_init.sql)).
 
-**Roles.** There is exactly one **superadmin** (made with `npm run create-admin`). Only the superadmin can make or unmake admins, and change or remove an admin's account. **Admins** can add, edit, reset passwords for, and remove regular amigos, but not other admins. Nobody can change or remove the superadmin except the superadmin, who can't remove or demote themselves. These account rules are in [`lib/rules.ts`](lib/rules.ts) too.
+**Roles.** There is exactly one **superadmin** (made with `npm run create-admin`). Only the superadmin can make or unmake admins, and change or remove an admin's account. **Admins** can add, edit, reset passwords for, and remove regular amigos, but not other admins. Admins don't see backer lists or edit other people's projects; only the superadmin does. Nobody can change or remove the superadmin except the superadmin, who can't remove or demote themselves. These account rules are in [`lib/rules.ts`](lib/rules.ts) too.
 
 ## Stack
 

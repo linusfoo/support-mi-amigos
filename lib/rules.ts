@@ -21,7 +21,7 @@ export function statusOf(project: ProjectCore, totalCents: number, now = new Dat
 
 /** THE rule: only the creator (or the superadmin) sees who chipped in and how much. */
 export function canSeeBackers(viewer: User, project: ProjectCore) {
-  return viewer.is_admin || viewer.id === project.creator_id;
+  return viewer.is_superadmin || viewer.id === project.creator_id;
 }
 
 /** You can't back your own project, and pledges close at the deadline. */
@@ -31,7 +31,7 @@ export function canPledge(viewer: User, project: ProjectCore) {
 
 /** Creators can edit until the deadline; the superadmin can always edit. */
 export function canEditProject(viewer: User, project: ProjectCore) {
-  return viewer.is_admin || (viewer.id === project.creator_id && isOpen(project));
+  return viewer.is_superadmin || (viewer.id === project.creator_id && isOpen(project));
 }
 
 export const MAX_AMIGOS = 10;
