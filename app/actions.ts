@@ -39,7 +39,7 @@ async function loadProject(id: number) {
 
 export async function logIn(_: FormState, fd: FormData): Promise<FormState> {
   const user = await verifyPassword(text(fd, "username"), String(fd.get("password") ?? ""));
-  if (!user) return { error: "That username and password don't match. Ask your admin if you've forgotten." };
+  if (!user) return { error: "That username and password don't match. Ask your admin if you've forgotten your password." };
   await startSession(user.id);
   redirect("/");
 }
@@ -143,6 +143,44 @@ export async function withdrawPledge(_: FormState, fd: FormData): Promise<FormSt
 
 const USERNAME = /^[a-z0-9_]{3,20}$/;
 
+/** Shared by the admin's "add amigo" form and public sign-up. Returns an error message, or null if all's well. */
+async function checkNewAmigo(username: string, displayName: string, password: string) {
+  if (!USERNAME.test(username)) return "Usernames are 3–20 lowercase letters, numbers or underscores.";
+  if (!displayName) return "Add a display name, like Ana.";
+  if (password.length < 8) return "Passwords need at least 8 characters.";
+  const [{ count }] = await db()<{ count: number }[]>`select count(*) from users`;
+  if (count >= MAX_AMIGOS) return `Support Mi Amigos is for ${MAX_AMIGOS} amigos max, and it's full.`;
+  return null;
+}
+
+async function insertAmigo(username: string, displayName: string, password: string, isAdmin: boolean) {
+  const [row] = await db()<{ id: number }[]>`
+    insert into users (username, display_name, password_hash, is_admin)
+    values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), ${isAdmin})
+    returning id`;
+  return row.id;
+}
+
+/** Anyone with the link can join until the group hits MAX_AMIGOS. Never creates an admin. */
+export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
+  const username = text(fd, "username").toLowerCase();
+  const displayName = text(fd, "displayName");
+  const password = String(fd.get("password") ?? "");
+
+  const problem = await checkNewAmigo(username, displayName, password);
+  if (problem) return { error: problem };
+
+  let id: number;
+  try {
+    id = await insertAmigo(username, displayName, password, false);
+  } catch (e) {
+    return { error: dbMessage(e) };
+  }
+  await startSession(id);
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+
 export async function createAmigo(_: FormState, fd: FormData): Promise<FormState> {
   await requireAdmin();
   const username = text(fd, "username").toLowerCase();
@@ -150,17 +188,11 @@ export async function createAmigo(_: FormState, fd: FormData): Promise<FormState
   const password = String(fd.get("password") ?? "");
   const isAdmin = fd.get("isAdmin") === "on";
 
-  if (!USERNAME.test(username)) return { error: "Usernames are 3–20 lowercase letters, numbers or underscores." };
-  if (!displayName) return { error: "Add a display name, like Ana." };
-  if (password.length < 8) return { error: "Passwords need at least 8 characters." };
-
-  const [{ count }] = await db()<{ count: number }[]>`select count(*) from users`;
-  if (count >= MAX_AMIGOS) return { error: `Support Mi Amigos is for ${MAX_AMIGOS} amigos max. Remove someone first.` };
+  const problem = await checkNewAmigo(username, displayName, password);
+  if (problem) return { error: problem };
 
   try {
-    await db()`
-      insert into users (username, display_name, password_hash, is_admin)
-      values (${username}, ${displayName}, extensions.crypt(${password}, extensions.gen_salt('bf')), ${isAdmin})`;
+    await insertAmigo(username, displayName, password, isAdmin);
   } catch (e) {
     return { error: dbMessage(e) };
   }

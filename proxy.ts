@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // happen on the server in requireUser()/requireAdmin().
 export function proxy(request: NextRequest) {
   const hasSession = request.cookies.has("sma_session");
-  const onLogin = request.nextUrl.pathname === "/login";
-  if (!hasSession && !onLogin) {
+  const isPublic = ["/login", "/signup"].includes(request.nextUrl.pathname);
+  if (!hasSession && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   return NextResponse.next();

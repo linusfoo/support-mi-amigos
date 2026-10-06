@@ -6,7 +6,7 @@ Built for a class exercise: take a familiar app and shrink it for a group of at 
 
 | | |
 |---|---|
-| **The ten** | A friend group. One superadmin creates every account (no sign-up page, max 10 accounts). |
+| **The ten** | A friend group. Friends sign up themselves at `/signup`, or the superadmin adds them; either way, max 10 accounts. |
 | **One record** | A **project**: title, story, $ goal, deadline. |
 | **One shared action** | **Pledge** dollars toward a project. All-or-nothing: *Funded!* if the goal is reached by the deadline, *Missed it* if not. No real money moves. |
 | **One rule** | **Only the project's creator (and the superadmin) can see who pledged and how much.** Everyone else sees the total, the backer count, and their own pledge. You can't back your own project, and pledges lock at the deadline. |

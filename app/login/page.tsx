@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { logIn } from "@/app/actions";
@@ -29,7 +30,9 @@ export default async function LoginPage() {
         <label className="field">
           <span>Password</span>
           <input className="input" name="password" type="password" autoComplete="current-password" required />
-          <small>No account? Your group&apos;s admin creates them.</small>
+          <small>
+            No account? <Link href="/signup">Sign up</Link>
+          </small>
         </label>
       </ActionForm>
     </main>
